@@ -1,11 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
-import keras_tuner as kt
-import joblib
-import math
-import typing as typ
-from tensorflow import keras
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
@@ -57,12 +51,6 @@ def CreateClusterDataSet(legit_cluster, frauded_cluster, sample_size):
     imputer_numeric.fit(X)
     X = imputer_numeric.transform(X)
     
-    # Encode categorical data
-    # =============================================================================
-    #     enc = OneHotEncoder()
-    #     y = enc.fit_transform(np.array(y).reshape(len(y),1)).toarray()
-    # =============================================================================
-    
     # Splitting the dataset into the Training set and Test set
     from sklearn.model_selection import train_test_split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 1)
@@ -72,17 +60,16 @@ def CreateClusterDataSet(legit_cluster, frauded_cluster, sample_size):
     X_train = sc.fit_transform(X_train)
     X_test = sc.transform(X_test)
     
+    # Storing classifier data
     classifierData = ClassifierData()
     classifierData.X_train = X_train
     classifierData.X_test = X_test
     classifierData.y_train = y_train
     classifierData.y_test = y_test
     classifierData.X_scaler = sc
-    #classifierData.y_encoder = enc
     
     return classifierData
     
-
 classifierDataDict = dict()
 cluster_frauded = 512  
 clusters_legit = np.sort(dataset.Cluster.unique())
@@ -112,14 +99,19 @@ for cluster in classifierDataDict:
     avg_cluster_accuracy += classifierDataDict[cluster].AccuracyScore
 avg_cluster_accuracy = avg_cluster_accuracy/len(classifierDataDict)
     
-# Predicting results by using all clusters
-cluster_to_test = 1
-dataset_cluster = dataset.loc[dataset['Cluster'].isin([cluster_to_test])]
-dataset_cluster = dataset_cluster[['V1','V2','V3','V4','V5','V6','V7','V8','V9','V10',
-                                   'V11','V12','V13','V14','V15','V16','V17','V18','V19','V20',
-                                   'V21','V22','V23','V24','V25','V26','V27','V28','Amount','Class']]
-X_test = dataset_cluster.iloc[:, :-1].values
-y_test = dataset_cluster.iloc[:, -1].values
+# Predicting final results by using all clusters
+dataset_columns = ['V1','V2','V3','V4','V5','V6','V7','V8','V9','V10',
+                   'V11','V12','V13','V14','V15','V16','V17','V18','V19','V20',
+                   'V21','V22','V23','V24','V25','V26','V27','V28','Amount','Class']
+dataset_frauded = dataset.loc[dataset['Class'] == 1]
+dataset_frauded = dataset_frauded[dataset_columns]
+dataset_legit = dataset.loc[dataset['Class'] == 0].sample(n = 492)
+dataset_legit = dataset_legit[dataset_columns]
+dataset_merged = pd.concat([dataset_legit, dataset_frauded])
+dataset_merged = dataset_merged.sample(frac=1).reset_index(drop=True)
+
+X_test = dataset_merged.iloc[:, :-1].values
+y_test = dataset_merged.iloc[:, -1].values
 y_pred_final_arr = []
 
 for row in range(0,len(X_test)):
@@ -135,57 +127,16 @@ for row in range(0,len(X_test)):
         y_pred_0_counter += len(y_pred[y_pred == 0])
         y_pred_1_counter += len(y_pred[y_pred == 1])
         
-    if (y_pred_0_counter < 2):
+    if (y_pred_0_counter < 8):
         y_pred_final = 1
         
     y_pred_final_arr.append(y_pred_final)
+    print('Row: {0} out of {1}, predicted'.format(row,len(X_test)))
     
 y_pred_final_arr = np.array(y_pred_final_arr)
 
 from sklearn.metrics import confusion_matrix, accuracy_score
 cm_final = confusion_matrix(y_test, y_pred_final_arr)
 acc_score_final = accuracy_score(y_test, y_pred_final_arr)
-        
-
-
-
-
-print('y_pred_0_counter: {0}'.format(y_pred_0_counter/len(dataset_cluster.index)))
-print('y_pred_1_counter: {0}'.format(y_pred_1_counter/len(dataset_cluster.index)))
-print('y_pred_final: {0}'.format(y_pred_final))
-
-
-
-
-
-
-
-
-
-
-
-
-# Applying k-Fold Cross Validation
-# Applying Grid Search to find the best model and the best parameters
-from sklearn.model_selection import GridSearchCV
-parameters = [{'criterion': ['gini'], 
-               'splitter': ['best'],
-               'min_samples_split': [2],
-               'min_samples_leaf': [1,2,3],
-               'min_weight_fraction_leaf': [0],
-               'min_impurity_decrease': [0],
-               'ccp_alpha': [0],
-               'random_state': [0]}]
-grid_search = GridSearchCV(estimator = classifier,
-                           param_grid = parameters,
-                           scoring = 'accuracy',
-                           cv = 10,
-                           n_jobs = -1)
-grid_search.fit(X_train, y_train)
-best_accuracy = grid_search.best_score_
-best_parameters = grid_search.best_params_
-print("Best Accuracy: {:.2f} %".format(best_accuracy*100))
-print("Best Parameters:", best_parameters)
-
 
 
