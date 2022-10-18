@@ -22,6 +22,7 @@ dataset = pd.read_csv('creditcard_clusters.csv')
 dataset = dataset[['V1','V2','V3','V4','V5','V6','V7','V8','V9','V10',
                    'V11','V12','V13','V14','V15','V16','V17','V18','V19','V20',
                    'V21','V22','V23','V24','V25','V26','V27','V28','Amount','Class','Cluster']]
+cluster_frauded = dataset.loc[dataset["Class"] == 1].iloc[0,30]
 
 # Training the Decision Tree Classification model on the Training set
 def CreateClusterDataSet(legit_cluster, frauded_cluster, sample_size):
@@ -71,7 +72,6 @@ def CreateClusterDataSet(legit_cluster, frauded_cluster, sample_size):
     return classifierData
     
 classifierDataDict = dict()
-cluster_frauded = 512  
 clusters_legit = np.sort(dataset.Cluster.unique())
 clusters_legit = np.delete(clusters_legit, np.where(clusters_legit==cluster_frauded))
 

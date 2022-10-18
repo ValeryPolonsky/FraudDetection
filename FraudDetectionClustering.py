@@ -89,7 +89,7 @@ new_dataset = new_dataset.rename(columns={new_dataset.columns[0]: 'V1',
                                           new_dataset.columns[28]: 'Amount',
                                           new_dataset.columns[29]: 'Class',
                                           new_dataset.columns[30]: 'Cluster'})
-new_dataset = new_dataset.sample(n = len(new_dataset.index))
+new_dataset = new_dataset.sample(frac=1).reset_index(drop=True)
 new_dataset.to_csv('creditcard_clusters.csv')
 
 
